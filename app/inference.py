@@ -490,14 +490,23 @@ def preprocess_skeleton_sequence(keypoint, keypoint_score=None, clip_len=100, nu
     else:
         kp_sampled = kp
 
-    # 3. Format person dimension (pad or truncate to num_person)
+    # 3. Format joint dimension (ensure V matches graph layout: 17 for coco, 21 for handmp)
+    target_V = 21 if layout == 'handmp' else 17
+    cur_V = kp_sampled.shape[2]
+    if cur_V < target_V:
+        pad_v = np.zeros((kp_sampled.shape[0], clip_len, target_V - cur_V, in_channels), dtype=np.float32)
+        kp_sampled = np.concatenate([kp_sampled, pad_v], axis=2)
+    elif cur_V > target_V:
+        kp_sampled = kp_sampled[:, :, :target_V, :]
+
+    # 4. Format person dimension (pad or truncate to num_person)
     if M_raw < num_person:
-        pad_p = np.zeros((num_person - M_raw, clip_len, V, in_channels), dtype=np.float32)
+        pad_p = np.zeros((num_person - M_raw, clip_len, target_V, in_channels), dtype=np.float32)
         kp_sampled = np.concatenate([kp_sampled, pad_p], axis=0)
     elif M_raw > num_person:
         kp_sampled = kp_sampled[:num_person]
 
-    # Shape: (num_person, clip_len, V, in_channels) -> (1, num_person, clip_len, V, in_channels) = (N, M, T, V, C)
+    # Shape: (num_person, clip_len, target_V, in_channels) -> (1, num_person, clip_len, target_V, in_channels) = (N, M, T, V, C)
     tensor = torch.from_numpy(kp_sampled).unsqueeze(0).float()
     return tensor
 

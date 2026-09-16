@@ -288,19 +288,27 @@ with tab_analysis:
             try:
                 start_time = time.time()
                 
-                # 1. Pose Extraction
-                status_text.markdown("⏳ **Step 1/3:** Extracting 2D skeleton joints with YOLOv8-Pose...")
-                pose_ext = PoseExtractor(device=device_choice)
-                
+                # 1. Pose / Gesture Extraction
                 def pose_progress(pct, msg):
                     progress_bar.progress(float(pct) * 0.5)
                     status_text.markdown(f"⏳ **Step 1/3:** {msg}")
 
-                pose_data = pose_ext.extract_from_video(
-                    video_file_path,
-                    max_frames=max_frames_process,
-                    progress_callback=pose_progress
-                )
+                if selected_model_key == 'stgcnpp_hagrid':
+                    status_text.markdown("⏳ **Step 1/3:** Extracting 21-keypoint Hand landmarks...")
+                    gesture_ext = HandGestureExtractor()
+                    pose_data = gesture_ext.extract_from_video(
+                        video_file_path,
+                        max_frames=max_frames_process,
+                        progress_callback=pose_progress
+                    )
+                else:
+                    status_text.markdown("⏳ **Step 1/3:** Extracting 2D skeleton joints with YOLOv8-Pose...")
+                    pose_ext = PoseExtractor(device=device_choice)
+                    pose_data = pose_ext.extract_from_video(
+                        video_file_path,
+                        max_frames=max_frames_process,
+                        progress_callback=pose_progress
+                    )
 
                 skeletons = pose_data['skeleton_sequence']
                 frames = pose_data['frames']
